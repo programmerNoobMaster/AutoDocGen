@@ -1,0 +1,9 @@
+{
+  "factual": true,
+  "cites_ok": true,
+  "hallucinated": false,
+  "unsupported_claims": [],
+  "missing_but_expected": [],
+  "score": 1,
+  "notes": "All claims in the draft are supported by the provided context, and citations are correctly referenced."
+}

@@ -1,0 +1,124 @@
+[the run-pipeline.py:7-50] def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--repo", required=True, help="GitHub repo URL to analyze")
+    p.add_argument("--embed", default="text-embedding-3-small")
+    args = p.parse_args()
+
+    # 1) clone -> 2) chunk -> 3) index
+    repo_path = clone_repo(args.repo)
+    chunks = extract_all_chunks(repo_path)
+    save_to_faiss_split_by_ext(chunks, base_dir="docs_index", model=args.embed)
+
+    # 4) run your graph to write Markdown into app/docs/
+    app = build_graph()
+
+    def run(spec: SectionSpec):
+        out = app.invoke({"spec": spec})
+        print("Wrote:", out["out_path"], flush=True)
+
+    # Use the same sections you generate now (adjust names/queries if need
+
+[the save_to_vector_db.py:20-22] def _norm_ext(ext: str) -> str:
+    ext = (ext or "").lower().lstrip(".")
+    return ext
+
+[the graph.py:335-362] def decide_pass_or_revise(state: State):
+    """
+    Route based on judge result (and human notes if present).
+    - If human left notes → revise once.
+    - If judge flags problems or low score → revise up to max_retries.
+    - Otherwise → save.
+    """
+    # Human path: if notes exist, do exactly one revise pass
+    if state.get("_human_notes"):
+        return "revise"
+
+    # LLM path
+    try:
+        data = json.loads(state.get("_judge", "") or "{}")
+    except Exception:
+        return "revise"  # malformed judge → try revise once
+
+    score = float(data.get("score", 0))
+    bad = (not data.get("factual", True)) or data.get("hallucinated", False) or (not data.get("cites_ok", True))
+
+    
+
+[the graph.py:113-120] def _score_code_hit(d) -> int:
+    src = Path(d.metadata.get("source","")).name
+    t   = (d.metadata.get("type") or "").lower()
+    s = 0
+    if src.endswith(".py"): s += 1
+    if _CODE_NAME_BOOST.search(src): s += 2
+    if t in _DOC_TYPES: s += 3          # prefer docstrings (high info density)
+    return s
+
+[the preload.js:1-6] const { contextBridge, ipcRenderer } = require("electron");
+contextBridge.exposeInMainWorld("api", {
+  generateDoc: (repoUrl) => ipcRenderer.invoke("generate-doc", { repoUrl }),
+  onLog: (cb) => ipcRenderer.on("log", (_e, line) => cb(line)),
+});
+
+
+[the requirement.txt:1-12] openai
+langchain
+langgraph
+langchain-openai
+langchain-community
+python-dotenv
+faiss-cpu
+gitpython
+nbformat
+pandas
+python-docx
+tiktoken
+
+[the graph.py:85-111] Authoring/retrieval spec for generating a single document section.
+
+Fields:
+    name: Human-readable section name (e.g., "Introduction").
+    query: Retrieval query used to fetch supporting context.
+    route: Retrieval route:
+           - "text": search only the TEXT index.
+           - "both": search TEXT and CODE indexes.
+    k_text: Top-K passages to fetch from the TEXT index.
+    k_code: Top-K passages to fetch from the CODE index (used when route="both").
+    guidance: Optional writing hints/style/constraints for the writer.
+    additional_context: Optional extra context appended to the prompt.
+
+Notes:
+    - For purely narrative sections, keep `route="text"`.
+    - For API/SDK/referenc
+
+[the chunking.py:76-96] Callback for `shutil.rmtree(..., onerror=...)` that fixes permission issues.
+
+Attempts to make the problematic `path` writable and then retries the
+originally failing operation (`func`). This is useful on platforms where
+read-only files (e.g., on Windows) can block directory removal.
+
+Args:
+    func (Callable[[str], None]): The function that raised the error
+        (typically `os.remove`, `os.rmdir`, or `shutil.rmtree` internals).
+    path (str | os.PathLike): The filesystem path that could not be removed.
+    exc_info (tuple): Exception triple from `sys.exc_info()`. Present for
+        signature compatibility; not used.
+
+[the context.txt:1-70] [the app.py:24-35] def page_1():
+    st.title("Welcome to StepUpYourCareer.AI")
+    st.markdown("##### Let's get started with a few details.")
+
+    name = st.text_input("Your Full Name")
+    email = st.text_input("Your Email Address")
+
+    if name and email:
+        if st.button("➡️ Proceed to Resume Analysis"):
+            st.session_state.name = name
+            st.session_state.email = email
+            st.session_state.page = 2
+
+[the Skill_Gap_Analysis_and_Action_Plan_Generation.ipynb:cell_3] client = OpenAI(api_key=userdata.get("openai_key"))
+
+[the Skill_Gap_Analysis_and_Action_Plan_Generation.ipynb:cell_21] with open("skill_gap_analysis.json", "r") as f:
+    examples = json.load(f)
+
+de
