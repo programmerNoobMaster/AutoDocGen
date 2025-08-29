@@ -18,6 +18,10 @@ if "wrote_files" not in st.session_state:
     st.session_state.wrote_files = []
 if "combined_md" not in st.session_state:
     st.session_state.combined_md = ""
+if "edit_mode" not in st.session_state:
+    st.session_state.edit_mode = False
+if "edited_md" not in st.session_state:
+    st.session_state.edited_md = ""
 
 # =============== Markdown cleaning helpers ===============
 HEADING_RE = re.compile(r'^\s*(#{1,6})\s+(.*\S)\s*$', re.M)
@@ -193,8 +197,6 @@ def show_input_view():
             placeholder="Paste a GitHub repository URL…",
         )
         cols = st.columns([0.82, 0.18])
-        with cols[0]:
-            pass  # input is full-width above
         with cols[1]:
             submitted = st.form_submit_button("➡️  Enter", use_container_width=True)
 
@@ -227,53 +229,112 @@ def show_running_view():
             st.rerun()
 
 def show_results_view():
-    st.success("✅ Documentation generated.")
-
-    # Preview
-    st.subheader("Preview")
-    for p in st.session_state.wrote_files:
-        p = Path(p)
-        raw = p.read_text(encoding="utf-8", errors="ignore")
-        cleaned = clean_section_md(raw, p.stem)
-        if not starts_with_heading(cleaned):
-            st.markdown(f"# {humanize_stem(p.stem)}")
-        st.markdown(cleaned)
-
-    st.divider()
-
-    # Downloads
-    col1, col2, col3 = st.columns([0.33, 0.33, 0.34])
-    with col1:
-        st.download_button(
-            "⬇️ Download Markdown",
-            data=st.session_state.combined_md.encode("utf-8"),
-            file_name="Technical_Documentation.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-    with col2:
-        try:
-            docx_bytes = naive_markdown_to_docx(st.session_state.combined_md)
-            st.download_button(
-                "⬇️ Download DOCX (basic)",
-                data=docx_bytes,
-                file_name="Technical_Documentation.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
-            )
-        except Exception as e:
-            st.info(f"DOCX export skipped: {e}")
-    with col3:
-        # Explicit back button so user can run another URL
+    # Top bar with Edit toggle and Back
+    top_cols = st.columns([0.6, 0.2, 0.2])
+    with top_cols[0]:
+        st.success("✅ Documentation generated.")
+    with top_cols[1]:
+        if st.session_state.edit_mode:
+            if st.button("✅ Done editing", use_container_width=True):
+                st.session_state.edit_mode = False
+                st.rerun()
+        else:
+            if st.button("✏️ Edit final document", use_container_width=True):
+                st.session_state.edited_md = st.session_state.combined_md
+                st.session_state.edit_mode = True
+                st.rerun()
+    with top_cols[2]:
         if st.button("↩︎ Back", use_container_width=True):
             st.session_state.stage = "input"
             st.session_state.repo_url = ""
             st.session_state.wrote_files = []
             st.session_state.combined_md = ""
+            st.session_state.edited_md = ""
+            st.session_state.edit_mode = False
             st.rerun()
 
+    st.divider()
+
+    if st.session_state.edit_mode:
+        # ===== EDITOR MODE =====
+        st.subheader("Edit Final Document (Markdown)")
+        st.caption("Your changes here will be used for downloads below.")
+        st.session_state.edited_md = st.text_area(
+            label="",
+            value=st.session_state.edited_md or st.session_state.combined_md,
+            height=600,
+            placeholder="Edit your documentation as Markdown…",
+        )
+
+        # Quick preview
+        with st.expander("Preview (rendered Markdown)"):
+            st.markdown(st.session_state.edited_md)
+
+        # Save/Download buttons
+        btn_cols = st.columns([0.34, 0.33, 0.33])
+        with btn_cols[0]:
+            if st.button("💾 Save changes", use_container_width=True):
+                st.session_state.combined_md = st.session_state.edited_md
+                st.success("Saved to session.")
+        with btn_cols[1]:
+            st.download_button(
+                "⬇️ Download edited Markdown",
+                data=(st.session_state.edited_md or st.session_state.combined_md).encode("utf-8"),
+                file_name="Technical_Documentation.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        with btn_cols[2]:
+            try:
+                docx_bytes = naive_markdown_to_docx(st.session_state.edited_md or st.session_state.combined_md)
+                st.download_button(
+                    "⬇️ Download edited DOCX",
+                    data=docx_bytes,
+                    file_name="Technical_Documentation.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.info(f"DOCX export skipped: {e}")
+
+    else:
+        # ===== READ-ONLY RESULTS MODE =====
+        st.subheader("Preview")
+        for p in st.session_state.wrote_files:
+            p = Path(p)
+            raw = p.read_text(encoding="utf-8", errors="ignore")
+            cleaned = clean_section_md(raw, p.stem)
+            if not starts_with_heading(cleaned):
+                st.markdown(f"# {humanize_stem(p.stem)}")
+            st.markdown(cleaned)
+
+        st.divider()
+
+        # Downloads based on current combined_md
+        col1, col2 = st.columns([0.5, 0.5])
+        with col1:
+            st.download_button(
+                "⬇️ Download Markdown",
+                data=st.session_state.combined_md.encode("utf-8"),
+                file_name="Technical_Documentation.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        with col2:
+            try:
+                docx_bytes = naive_markdown_to_docx(st.session_state.combined_md)
+                st.download_button(
+                    "⬇️ Download DOCX (basic)",
+                    data=docx_bytes,
+                    file_name="Technical_Documentation.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.info(f"DOCX export skipped: {e}")
+
 # =============== Router ===============
-st.title("🧠 Auto Doc Gen — Streamlit")  # keep title persistent
+st.title("🧠 Auto Doc Gen — Streamlit")  # persistent title
 
 if st.session_state.stage == "input":
     show_input_view()
