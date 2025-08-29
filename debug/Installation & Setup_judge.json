@@ -3,7 +3,9 @@
   "cites_ok": true,
   "hallucinated": false,
   "unsupported_claims": [],
-  "missing_but_expected": [],
-  "score": 1,
-  "notes": "All claims in the draft are supported by the provided context, and citations are correctly referenced."
+  "missing_but_expected": [
+    "Python version requirement"
+  ],
+  "score": 0.9,
+  "notes": "The installation steps are clear and supported by the context. However, the required Python version is not specified, which is a missing but expected detail."
 }

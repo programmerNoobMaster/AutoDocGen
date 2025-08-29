@@ -5,5 +5,5 @@
   "unsupported_claims": [],
   "missing_but_expected": [],
   "score": 1,
-  "notes": "All claims in the draft are supported by the context provided, and the citations are correctly referencing the requirements.txt file."
+  "notes": "The claims about the technologies used (Python, JavaScript, Flask, Streamlit, NumPy, Pandas, FAISS) are supported by the context provided in the code snippets."
 }
